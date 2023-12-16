@@ -24,22 +24,35 @@ from itertools import cycle
 
 # Machine Learning Modules
 from sklearn.naive_bayes import GaussianNB
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier
 
+from sklearn.neighbors import KNeighborsClassifier
+
+from sklearn.tree import DecisionTreeClassifier
 
 from bioinfokit.visuz import cluster
 
-#from google.colab import files
+# from google.colab import files
 
-#uploaded = files.upload()
+# uploaded = files.upload()
 
 #read cvs file into dataframe
-df = pd.read_csv('https://github.com/ZaraJ2023/Concordia-INSE6220-F2023/blob/main/Raisin_Dataset01.csv')
+df = pd.read_csv('https://raw.githubusercontent.com/ZaraJ2023/Concordia-INSE6220-F2023/main/Raisin_Dataset01.csv')
 df.head(n=25)
 df.info()
 y = df['class']
 target = df['class'].to_numpy()
+print("Number of duplicated rows is: ", df.duplicated().sum())
+
+print("Number of rows with NaNs is: ", df.isna().any(axis=1).sum())
+
+sns.pairplot(df, hue='class')
+plt.show()
+
+y = df['class']
+y.value_counts().plot(kind='pie')
+plt.ylabel('')
+plt.show()
+
 
 
 X = df.iloc[:,0:7]
@@ -57,7 +70,7 @@ print(observations)
 variables = list(df.columns)
 print(variables)
 
-y.value_counts().plot(kind='bar', rot=0, color='blue')
+y.value_counts().plot(kind='bar', rot=0, color='orange')
 plt.xlabel('Class')
 plt.ylabel('Count')
 plt.show()
@@ -81,9 +94,11 @@ plt.show()
 df.describe()
 plt.show()
 
+
 # #pair plot
 sns.pairplot(df)
 plt.show()
+
 
 # ## **Covariance**
 dfc = df - df.mean() #centered data
@@ -183,7 +198,7 @@ plt.xlabel('$Z_1$')
 plt.ylabel('$Z_2$')
 for i in range(len(A1)):
 # arrows project features as vectors onto PC axes
-  plt.arrow(0, 0, A1[i]*max(Z1), A2[i]*max(Z2), color='k', width=0.0005, head_width=0.0025)
+  plt.arrow(0, 0, A1[i]*max(Z1), A2[i]*max(Z2), color='orange', width=0.0005, head_width=0.0025)
   plt.text(A1[i]*max(Z1)*1.2, A2[i]*max(Z2)*1.2,variables[i], color='k')
 
 plt.scatter(Z[idx_Kecimen,0], Z[idx_Kecimen,1], c='r', label='Kecimen (0)')
@@ -290,64 +305,65 @@ print(np.argwhere(Z2>3*np.sqrt(Lambda[1])))
 
 ###### **Multi-Class Classification**
 
+
 # Test-Train Split
-Y = df['Perimeter']
-
-# Assuming the target variable is dropped from features
-
-X_train, X_test, y_train, y_test = train_test_split(df, Y, test_size=0.2, random_state=0)
-print(f'Train Dataset Size: {X_train.shape[0]}')
-print(f'Test Dataset Size: {X_test.shape[0]}')
-
-Z_train, Z_test, zy_train, zy_test = train_test_split(Z, Y, test_size=0.2, random_state=0)
-Z12_train, Z12_test, z12y_train, z12y_test = train_test_split(Z[:,:2], Y, test_size=0.2, random_state=0)
-
-# Define the evaluation metric
-scoring = ['f1_macro']
+# Y = df['Perimeter']
+#
+# # Assuming the target variable is dropped from features
+#
+# X_train, X_test, y_train, y_test = train_test_split(df, Y, test_size=0.2, random_state=0)
+# print(f'Train Dataset Size: {X_train.shape[0]}')
+# print(f'Test Dataset Size: {X_test.shape[0]}')
+#
+# Z_train, Z_test, zy_train, zy_test = train_test_split(Z, Y, test_size=0.2, random_state=0)
+# Z12_train, Z12_test, z12y_train, z12y_test = train_test_split(Z[:,:2], Y, test_size=0.2, random_state=0)
+#
+# # Define the evaluation metric
+# scoring = ['f1_macro']
 
 #Gaussian Naive Bayes (GNB)
-gnb = GaussianNB()
-
-datasets = [('FULL DATA', X_train, y_train, X_test, y_test), ('Z', Z_train, zy_train, Z_test, zy_test),
-            ('Z12', Z12_train, z12y_train, Z12_test, z12y_test)]
-for i, (name, Xtr, ytr, Xtst, ytst) in enumerate(datasets):
-    gnb.fit(Xtr, ytr)
-    y_pred = gnb.predict(Xtst)
-    gnb_score = gnb.score(Xtst, ytst)
-
-    # Classification Report
-    print(f'DATASET: {name}')
-    print('Classification Report:')
-    print(classification_report(ytst, y_pred, digits=3))
-
-    # Confusion Matrix
-    cm_gnb = confusion_matrix(y_true=ytst, y_pred=y_pred)
-    ax = sns.heatmap(cm_gnb, cmap='RdYlGn_r', linewidths=0.5, annot=True, square=True)
-    plt.yticks(rotation=0)
-    ax.tick_params(labelbottom=False, labeltop=True)
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
-    # plt.title('Naive Bayes Confusion Matrix')
-    plt.show()
-
-    # ADAPTED FROM: https://scikit-learn.org/stable/auto_examples/ensemble/plot_voting_decision_regions.html#sphx-glr-auto-examples-ensemble-plot-voting-decision-regions-py
-    if name == 'Z12':
-        # Plotting decision regions
-        x_min, x_max = Xtr[:, 0].min() - 1, Xtr[:, 0].max() + 1
-        y_min, y_max = Xtr[:, 1].min() - 1, Xtr[:, 1].max() + 1
-        xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.01), np.arange(y_min, y_max, 0.01))
-
-        Z = gnb.predict(np.c_[xx.ravel(), yy.ravel()])
-        Z = Z.reshape(xx.shape)
-
-        plt.contourf(xx, yy, Z, alpha=0.4)
-        plt.scatter(Xtr[:, 0], Xtr[:, 1], c=ytr, s=20, edgecolor="k", label='Train Set')
-        plt.scatter(Xtst[:, 0], Xtst[:, 1], c=ytst, marker='^', s=20, edgecolor="k", label='Test Set')
-        plt.xlabel('$Z_1$')
-        plt.ylabel('$Z_2$')
-        plt.legend()
-        plt.show()
-
-    print(np.where(ytst != y_pred))
+# gnb = GaussianNB()
+#
+# datasets = [('FULL DATA', X_train, y_train, X_test, y_test), ('Z', Z_train, zy_train, Z_test, zy_test),
+#             ('Z12', Z12_train, z12y_train, Z12_test, z12y_test)]
+# for i, (name, Xtr, ytr, Xtst, ytst) in enumerate(datasets):
+#     gnb.fit(Xtr, ytr)
+#     y_pred = gnb.predict(Xtst)
+#     gnb_score = gnb.score(Xtst, ytst)
+#
+#     # Classification Report
+#     print(f'DATASET: {name}')
+#     print('Classification Report:')
+#     print(classification_report(ytst, y_pred, digits=3))
+#
+#     # Confusion Matrix
+#     cm_gnb = confusion_matrix(y_true=ytst, y_pred=y_pred)
+#     ax = sns.heatmap(cm_gnb, cmap='RdYlGn_r', linewidths=0.5, annot=True, square=True)
+#     plt.yticks(rotation=0)
+#     ax.tick_params(labelbottom=False, labeltop=True)
+#     ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
+#     # plt.title('Naive Bayes Confusion Matrix')
+#     plt.show()
+#
+#     # ADAPTED FROM: https://scikit-learn.org/stable/auto_examples/ensemble/plot_voting_decision_regions.html#sphx-glr-auto-examples-ensemble-plot-voting-decision-regions-py
+#     if name == 'Z12':
+#         # Plotting decision regions
+#         x_min, x_max = Xtr[:, 0].min() - 1, Xtr[:, 0].max() + 1
+#         y_min, y_max = Xtr[:, 1].min() - 1, Xtr[:, 1].max() + 1
+#         xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.01), np.arange(y_min, y_max, 0.01))
+#
+#         Z = gnb.predict(np.c_[xx.ravel(), yy.ravel()])
+#         Z = Z.reshape(xx.shape)
+#
+#         plt.contourf(xx, yy, Z, alpha=0.4)
+#         plt.scatter(Xtr[:, 0], Xtr[:, 1], c=ytr, s=20, edgecolor="k", label='Train Set')
+#         plt.scatter(Xtst[:, 0], Xtst[:, 1], c=ytst, marker='^', s=20, edgecolor="k", label='Test Set')
+#         plt.xlabel('$Z_1$')
+#         plt.ylabel('$Z_2$')
+#         plt.legend()
+#         plt.show()
+#
+#     print(np.where(ytst != y_pred))
 
 
 #####K Nearest Neighbors (KNN)
