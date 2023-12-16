@@ -35,7 +35,7 @@ from bioinfokit.visuz import cluster
 #uploaded = files.upload()
 
 #read cvs file into dataframe
-df = pd.read_csv('Raisin_Dataset01.csv')
+df = pd.read_csv('https://github.com/ZaraJ2023/Concordia-INSE6220-F2023/blob/main/Raisin_Dataset01.csv')
 df.head(n=25)
 df.info()
 y = df['class']
