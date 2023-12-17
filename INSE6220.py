@@ -44,7 +44,7 @@ target = df['class'].to_numpy()
 print("Number of duplicated rows is: ", df.duplicated().sum())
 
 print("Number of rows with NaNs is: ", df.isna().any(axis=1).sum())
-
+"""
 sns.pairplot(df, hue='class')
 plt.show()
 
@@ -301,6 +301,260 @@ print(np.argwhere(Z1<-3*np.sqrt(Lambda[0])))
 print(np.argwhere(Z1>3*np.sqrt(Lambda[0])))
 print(np.argwhere(Z2<-3*np.sqrt(Lambda[1])))
 print(np.argwhere(Z2>3*np.sqrt(Lambda[1])))
+
+##############
+
+"""
+# check installed version
+import pycaret
+pycaret.__version__
+
+def enable_colab():
+ # Import the PyCaret library
+ import pycaret
+ pycaret.utils.enable_colab()
+ from enable_colab import enable_colab
+ enable_colab()
+
+data = df.sample(frac=0.9, random_state=786)
+data_unseen = df.drop(data.index)
+
+data.reset_index(drop=True, inplace=True)
+data_unseen.reset_index(drop=True, inplace=True)
+
+print('Data for Modeling: ' + str(data.shape))
+print('Unseen Data For Predictions: ' + str(data_unseen.shape))
+
+from pycaret.classification import *
+clf = setup(data=data, target='class', train_size=0.7, session_id=123)
+
+
+# loading sample dataset from pycaret dataset module
+from pycaret.datasets import get_data
+data = get_data('diabetes')
+
+# import pycaret classification and init setup
+from pycaret.classification import *
+s = setup(data, target = 'Class variable', session_id = 123)
+
+
+# import ClassificationExperiment and init the class
+from pycaret.classification import ClassificationExperiment
+exp = ClassificationExperiment()
+
+
+# check the type of exp
+type(exp)
+
+# init setup on exp
+exp.setup(data, target = 'Class variable', session_id = 123)
+
+# compare baseline models
+best = compare_models()
+
+# compare models using OOP
+exp.compare_models()
+
+# plot confusion matrix
+# plot_model(best, plot = 'confusion_matrix')
+
+# plot AUC
+plot_model(best, plot = 'auc')
+
+# plot feature importance
+plot_model(best, plot = 'feature')
+
+evaluate_model(best)
+
+# predict on test set
+holdout_pred = predict_model(best)
+
+# show predictions df
+holdout_pred.head()
+
+# copy data and drop Class variable
+
+new_data = data.copy()
+new_data.drop('Class variable', axis=1, inplace=True)
+new_data.head()
+
+# predict model on new_data
+predictions = predict_model(best, data = new_data)
+predictions.head()
+
+###
+# save pipeline
+save_model(best, 'my_first_pipeline')
+
+# load pipeline
+loaded_best_pipeline = load_model('my_first_pipeline')
+loaded_best_pipeline
+
+#### Detailed function-by-function overview
+# ✅ Setup
+# init setup function
+s = setup(data, target = 'Class variable', session_id = 123)
+
+# check all available config
+get_config()
+
+# lets access X_train_transformed
+get_config('X_train_transformed')
+
+# another example: let's access seed
+print("The current seed is: {}".format(get_config('seed')))
+
+# now lets change it using set_config
+set_config('seed', 786)
+print("The new seed is: {}".format(get_config('seed')))
+
+# help(setup)
+
+# init setup with normalize = True
+
+s = setup(data, target = 'Class variable', session_id = 123,
+          normalize = True, normalize_method = 'minmax')
+
+# lets check the X_train_transformed to see effect of params passed
+get_config('X_train_transformed')['Number of times pregnant'].hist()
+
+get_config('X_train')['Number of times pregnant'].hist()
+
+
+###✅ Compare Models
+
+best = compare_models()
+
+# check available models
+models()
+
+compare_tree_models = compare_models(include = ['dt', 'rf', 'et', 'gbc', 'xgboost', 'lightgbm', 'catboost'])
+
+compare_tree_models
+
+compare_tree_models_results = pull()
+compare_tree_models_results
+
+best_recall_models_top3 = compare_models(sort = 'Recall', n_select = 3)
+
+# list of top 3 models by Recall
+best_recall_models_top3
+
+# help(compare_models)
+
+##✅ Set Custom Metrics
+
+# check available metrics used in CV
+get_metrics()
+
+# create a custom function
+import numpy as np
+
+def custom_metric(y, y_pred):
+    tp = np.where((y_pred==1) & (y==1), (100), 0)
+    fp = np.where((y_pred==1) & (y==0), -5, 0)
+    return np.sum([tp,fp])
+
+# add metric to PyCaret
+add_metric('custom_metric', 'Custom Metric', custom_metric)
+
+# now let's run compare_models again
+compare_models()
+
+# remove custom metric
+remove_metric('custom_metric')
+
+##✅ Experiment Logging
+
+# from pycaret.classification import *
+# s = setup(data, target = 'Class variable', log_experiment='mlflow', experiment_name='diabetes_experiment')
+
+# compare models
+# best = compare_models()
+
+# start mlflow server on localhost:5000
+# !mlflow ui
+
+# help(setup)
+
+
+###✅ Create Model
+
+# check all the available models
+models()
+
+# train logistic regression with default fold=10
+lr = create_model('lr')
+
+lr_results = pull()
+print(type(lr_results))
+lr_results
+
+# train logistic regression with fold=3
+lr = create_model('lr', fold=3)
+
+# train logistic regression with specific model parameters
+create_model('lr', C = 0.5, l1_ratio = 0.15)
+
+# train lr and return train score as well alongwith CV
+create_model('lr', return_train_score=True)
+
+# change the probability threshold of classifier from 0.5 to 0.66
+create_model('lr', probability_threshold = 0.66)
+
+# help(create_model)
+
+
+###✅ Tune Model
+
+# train a dt model with default params
+dt = create_model('dt')
+
+# tune hyperparameters of dt
+tuned_dt = tune_model(dt)
+
+dt
+
+# define tuning grid
+dt_grid = {'max_depth' : [None, 2, 4, 6, 8, 10, 12]}
+
+# tune model with custom grid and metric = F1
+tuned_dt = tune_model(dt, custom_grid = dt_grid, optimize = 'F1')
+
+# to access the tuner object you can set return_tuner = True
+tuned_dt, tuner = tune_model(dt, return_tuner=True)
+
+# model object
+tuned_dt
+
+# tuner object
+tuner
+
+# tune dt using optuna
+tuned_dt = tune_model(dt, search_library = 'optuna')
+
+# help(tune_model)
+
+####✅ Ensemble Model
+
+# ensemble with bagging
+ensemble_model(dt, method = 'Bagging')
+
+# ensemble with boosting
+ensemble_model(dt, method = 'Boosting')
+
+# help(ensemble_model)
+
+
+#####✅ Blend Models
+
+# top 3 models based on recall
+best_recall_models_top3
+
+# blend top 3 models
+blend_models(best_recall_models_top3)
+
+# help(blend_models)
 
 
 ###### **Multi-Class Classification**
